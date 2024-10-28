@@ -1,14 +1,23 @@
 <script setup>
-import HelloWorld from "./components/HelloWorld.vue";
 import dayjs from "dayjs";
 import { nextTick, reactive, ref } from "vue";
 
 const fileInput = ref();
 const canvasRef = ref();
+const waterMarkConfig = reactive({
+  color: "#006AFF",
+  content: "",
+  type: 1,
+});
 
 const textContent = ref(dayjs().format("YYYY-MM-DD HH:mm:ss"));
 
-const type = ["左上", "右上", "垂直", "水平"];
+const types = [
+  { value: 1, label: "左上" },
+  { value: 2, label: "右上" },
+  { value: 3, label: "垂直" },
+  { value: 4, label: "水平" },
+];
 
 let typeIndex = ref(0);
 
@@ -54,6 +63,8 @@ const getFiles = async (e) => {
 
   Promise.all(requestList)
     .then((images) => {
+      console.log(images);
+
       setupData.photoList = images;
       console.log(images);
     })
@@ -69,8 +80,6 @@ const getImgInfo = (index, imgUrl) => {
     setupData.photoList[index].coverUrl = imgUrl;
     setupData.photoList[index].height = img.height;
     setupData.photoList[index].width = img.width;
-    console.log("图片原始高度", img.height);
-    console.log("图片原始宽度", img.width);
   };
 };
 const addWaterMark = () => {
@@ -176,7 +185,7 @@ const downloadImages = () => {
 </script>
 
 <template>
-  <button @click="upload">批量上传</button>
+  <div class="uploadFilesBtn" @click="upload">批量上传图片</div>
   <input
     ref="fileInput"
     type="file"
@@ -185,14 +194,12 @@ const downloadImages = () => {
     multiple
     @change="getFiles"
   />
-
-  <button>单个上传</button>
   <div>
     <h4>图片列表</h4>
     <div class="imgList">
       <template v-for="(item, index) in setupData.photoList" :key="index">
         <div class="imgItem">
-          <img :src="item.coverUrl" alt="" />
+          <img :src="item.currentSrc" alt="" />
           <div class="imgItem-info">
             <div>{{ item.name }}</div>
             <div>{{ item.size }}</div>
@@ -201,14 +208,74 @@ const downloadImages = () => {
       </template>
     </div>
   </div>
-  <div>操作栏</div>
-  <div>取消</div>
-  <div @click="addWaterMark">添加水印</div>
-  <div @click="downloadImages">下载图片</div>
+  <h4>操作栏</h4>
+  <div class="operation_container">
+    <div class="left_container">
+      <el-form :model="form" label-width="auto">
+        <el-form-item label="内容">
+          <el-input v-model="waterMarkConfig.content" />
+        </el-form-item>
+        <el-form-item label="颜色">
+          <el-color-picker v-model="waterMarkConfig.color" />
+        </el-form-item>
+        <el-form-item label="位置">
+          <el-select v-model="waterMarkConfig.type" placeholder="please select your zone">
+            <template v-for="item in types" :key="item">
+              <el-option :label="item.label" :value="item.value" />
+            </template>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="字号">
+          <el-input v-model="waterMarkConfig.content" />
+        </el-form-item>
+      </el-form>
+    </div>
+    <div class="right_container">
+      <div class="operation_btn addBtn" @click="addWaterMark">添加水印</div>
+      <div class="operation_btn downloadBtn" @click="downloadImages">下载图片</div>
+    </div>
+  </div>
+  <div>重置</div>
   <canvas ref="canvasRef" class="canvas_container"></canvas>
 </template>
 
 <style scoped>
+.operation_container {
+  display: flex;
+}
+.left_container {
+  width: 100%;
+}
+.right_container {
+  /* width: 50%; */
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  /* align-items: center; */
+  justify-content: center;
+}
+.addBtn {
+  background-color: #005ba5ff;
+  margin-bottom: 20px;
+}
+.downloadBtn {
+  background-color: #00a54aff;
+}
+.operation_btn {
+  width: 200px;
+  height: 50px;
+  line-height: 50px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  color: #ffff;
+}
+.uploadFilesBtn {
+  border: 2px dashed #0077ff;
+  height: 50px;
+  line-height: 50px;
+  cursor: pointer;
+}
 .canvas_container {
   /* width: 500px; */
   height: 500px;
@@ -219,8 +286,9 @@ const downloadImages = () => {
 }
 .imgList {
   display: flex;
-  width: 80vw;
-  height: 200px;
+  /* width: 80vw; */
+  height: 100px;
+  background-color: #dddddd;
 }
 .imgItem {
   padding: 0 10px;
