@@ -6,8 +6,9 @@ const fileInput = ref();
 const canvasRef = ref();
 const waterMarkConfig = reactive({
   color: "#006AFF",
-  content: "",
+  content: "测试文本",
   type: 1,
+  fontSize: 20,
 });
 
 const textContent = ref(dayjs().format("YYYY-MM-DD HH:mm:ss"));
@@ -88,8 +89,8 @@ const addWaterMark = () => {
   let scale = 0.4;
 
   let config = {
-    fontSize: 16,
-    text: "蟹黄包秘方持有者",
+    fontSize: waterMarkConfig.fontSize,
+    text: waterMarkConfig.content,
     gap: 300 * scale,
 
     waterMark_width: 100 * proportion * scale,
@@ -108,7 +109,7 @@ const addWaterMark = () => {
   const fontSize = Math.floor(canvas.width / 30);
 
   ctx.font = `${fontSize}px Arial`;
-  ctx.fillStyle = "rgba(0, 0, 0, 0.3)"; // 黑色文字，透明度为0.5
+  ctx.fillStyle = waterMarkConfig.color; // 黑色文字，透明度为0.5
   ctx.textBaseline = "middle";
 
   // 计算文字宽度以实现居中对齐
@@ -175,7 +176,7 @@ const addWaterMark = () => {
 
 const downloadImages = () => {
   let canvas = canvasRef.value;
-  const base64Img = canvas.toDataURL("image/png", 0.1);
+  const base64Img = canvas.toDataURL("image/png");
   var a = document.createElement("a"); // 生成一个a元素
   var event = new MouseEvent("click"); // 创建一个单击事件
   a.download = dayjs().valueOf("YYYY-MM-DD HH:mm:ss"); // 设置图片名称
@@ -226,16 +227,16 @@ const downloadImages = () => {
           </el-select>
         </el-form-item>
         <el-form-item label="字号">
-          <el-input v-model="waterMarkConfig.content" />
+          <el-input v-model="waterMarkConfig.fontSize" />
         </el-form-item>
       </el-form>
     </div>
     <div class="right_container">
       <div class="operation_btn addBtn" @click="addWaterMark">添加水印</div>
       <div class="operation_btn downloadBtn" @click="downloadImages">下载图片</div>
+      <div class="operation_btn resetBtn">重置</div>
     </div>
   </div>
-  <div>重置</div>
   <canvas ref="canvasRef" class="canvas_container"></canvas>
 </template>
 
@@ -252,13 +253,14 @@ const downloadImages = () => {
   display: flex;
   flex-direction: column;
   /* align-items: center; */
-  justify-content: center;
+  justify-content: space-between;
 }
 .addBtn {
   background-color: #005ba5ff;
-  margin-bottom: 20px;
+  /* margin-bottom: 20px; */
 }
 .downloadBtn {
+  /* margin-bottom: 20px; */
   background-color: #00a54aff;
 }
 .operation_btn {
@@ -276,6 +278,9 @@ const downloadImages = () => {
   line-height: 50px;
   cursor: pointer;
 }
+.resetBtn {
+  background-color: #a50000ff;
+}
 .canvas_container {
   /* width: 500px; */
   height: 500px;
@@ -288,13 +293,14 @@ const downloadImages = () => {
   display: flex;
   /* width: 80vw; */
   height: 100px;
+  padding: 10px 0;
   background-color: #dddddd;
 }
 .imgItem {
   padding: 0 10px;
 }
 .imgItem img {
-  width: 100px;
+  /* width: 100px; */
   height: 100px;
 }
 </style>
