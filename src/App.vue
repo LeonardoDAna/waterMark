@@ -1,14 +1,20 @@
 <script setup>
 import dayjs from "dayjs";
 import { nextTick, reactive, ref } from "vue";
+import preview from "./components/preview/index.vue";
 
 const fileInput = ref();
 const canvasRef = ref();
+const testCanvasRef = ref();
+
 const waterMarkConfig = reactive({
-  color: "#006AFF",
+  color: "rgba(129, 129, 129, 0.68)",
   content: "测试文本",
   type: 1,
-  fontSize: 20,
+  fontSize: 18,
+  gap: 30,
+  waterMark_width: 82,
+  waterMark_height: 82,
 });
 
 const textContent = ref(dayjs().format("YYYY-MM-DD HH:mm:ss"));
@@ -16,8 +22,7 @@ const textContent = ref(dayjs().format("YYYY-MM-DD HH:mm:ss"));
 const types = [
   { value: 1, label: "左上" },
   { value: 2, label: "右上" },
-  { value: 3, label: "垂直" },
-  { value: 4, label: "水平" },
+  { value: 3, label: "水平" },
 ];
 
 let typeIndex = ref(0);
@@ -91,10 +96,10 @@ const addWaterMark = () => {
   let config = {
     fontSize: waterMarkConfig.fontSize,
     text: waterMarkConfig.content,
-    gap: 300 * scale,
-
-    waterMark_width: 100 * proportion * scale,
-    waterMark_height: 500 * proportion * scale,
+    // gap: 300 * scale,
+    gap: waterMarkConfig.gap,
+    waterMark_width: waterMarkConfig.waterMark_width,
+    waterMark_height: waterMarkConfig.waterMark_height,
   };
 
   const canvas = canvasRef.value;
@@ -108,7 +113,7 @@ const addWaterMark = () => {
 
   const fontSize = Math.floor(canvas.width / 30);
 
-  ctx.font = `${fontSize}px Arial`;
+  ctx.font = `${waterMarkConfig.fontSize}px Arial`;
   ctx.fillStyle = waterMarkConfig.color; // 黑色文字，透明度为0.5
   ctx.textBaseline = "middle";
 
@@ -117,7 +122,7 @@ const addWaterMark = () => {
   // var x = (canvas.width - textWidth) / config.gap;
   // var y = canvas.height / config.gap;
 
-  let count = 100;
+  let count = 10;
 
   // ctx.rotate((Math.PI / 180) * 45);
   let line = 0;
@@ -130,22 +135,28 @@ const addWaterMark = () => {
   let block_height =
     textHeight >= config.waterMark_height ? textHeight : config.waterMark_height;
 
-  ctx.translate(canvas.width / 2, canvas.height / 2);
-  ctx.rotate((45 * Math.PI) / 180);
-  ctx.translate(-canvas.width / 2, -canvas.height / 2);
-  ctx.translate(-1000, -1000);
+  let compute_column = canvas.width % block_width;
+  let compute_line = canvas.height % block_height;
+  count = compute_column * compute_line + 4;
 
-  for (let index = 0; index <= count; index++) {
+  // ctx.translate(canvas.width / 2, canvas.height / 2);
+  // ctx.rotate((45 * Math.PI) / 180);
+  // ctx.translate(-canvas.width / 2, -canvas.height / 2);
+  // ctx.translate(-1000, -1000);
+
+  for (let index = 0; index < count; index++) {
     let x, y;
 
-    if (textWidth >= config.waterMark_width) {
-      // x = textWidth * column + config.gap;
-      x = block_width * column;
-      y = block_height * line + block_height / 2;
-    } else {
-      x = config.waterMark_width * column + config.gap;
-      y = (config.waterMark_width + textWidth) / 2;
-    }
+    // if (textWidth >= config.waterMark_width) {
+    //   x = block_width * column - textWidth / 2;
+    //   y = block_height * line;
+    // } else {
+    //   x = config.waterMark_width * column + config.gap;
+    //   y = (config.waterMark_width + textWidth) / 2;
+    // }
+
+    x = config.waterMark_width * column;
+    y = block_height * line;
 
     ctx.strokeStyle = "green";
     ctx.lineWidth = 30;
@@ -153,7 +164,8 @@ const addWaterMark = () => {
 
     column++;
 
-    if (textWidth * column >= canvas.width) {
+    console.log(x, canvas.width, y, canvas.height);
+    if (x + textWidth / 2 > canvas.width) {
       line++;
       column = 0;
     }
@@ -167,7 +179,20 @@ const addWaterMark = () => {
     // ctx.fillText(config.text, 0, 0);
 
     // 将文字绘制到Canvas上
-    ctx.fillText(config.text, x, y);
+    ctx.save(); // 保存当前状态
+    ctx.translate(x, y); // 移动到指定位置
+    switch (waterMarkConfig.type) {
+      case 1:
+        ctx.rotate((45 * Math.PI) / 180); // 旋转45度
+        break;
+      case 2:
+        ctx.rotate((-45 * Math.PI) / 180); // 旋转45度
+      case 3:
+        break;
+    }
+    ctx.fillText(config.text, 0, 0); // 绘制文字
+    ctx.restore(); // 恢复到之前的状态
+
     // ctx.translate(-x, -y);
 
     // ctx.rotate((-45 * Math.PI) / 180);
@@ -212,23 +237,68 @@ const downloadImages = () => {
   <h4>操作栏</h4>
   <div class="operation_container">
     <div class="left_container">
-      <el-form :model="form" label-width="auto">
-        <el-form-item label="内容">
-          <el-input v-model="waterMarkConfig.content" />
-        </el-form-item>
-        <el-form-item label="颜色">
-          <el-color-picker v-model="waterMarkConfig.color" />
-        </el-form-item>
-        <el-form-item label="位置">
-          <el-select v-model="waterMarkConfig.type" placeholder="please select your zone">
-            <template v-for="item in types" :key="item">
-              <el-option :label="item.label" :value="item.value" />
-            </template>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="字号">
-          <el-input v-model="waterMarkConfig.fontSize" />
-        </el-form-item>
+      <!-- <canvas ref="testCanvasRef" class="test_canvas_container"></canvas> -->
+      <preview :config="waterMarkConfig" />
+    </div>
+    <div class="middle_container">
+      <el-form
+        :model="waterMarkConfig"
+        class="demo-form-inline"
+        label-position="top"
+        :inline="true"
+        label-width="auto"
+      >
+        <el-row>
+          <el-col :span="8">
+            <el-form-item label="内容">
+              <el-input v-model="waterMarkConfig.content" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="位置">
+              <el-select
+                v-model="waterMarkConfig.type"
+                placeholder="please select your zone"
+              >
+                <template v-for="item in types" :key="item">
+                  <el-option :label="item.label" :value="item.value" />
+                </template>
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="字号">
+              <el-input-number v-model="waterMarkConfig.fontSize" :min="1">
+                <template #suffix>
+                  <span>px</span>
+                </template>
+              </el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="颜色">
+              <el-color-picker v-model="waterMarkConfig.color" show-alpha />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="水印宽度">
+              <el-input-number :min="1" v-model="waterMarkConfig.waterMark_width">
+                <template #suffix>
+                  <span>px</span>
+                </template>
+              </el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="水印高度">
+              <el-input-number :min="1" v-model="waterMarkConfig.waterMark_height">
+                <template #suffix>
+                  <span>px</span>
+                </template>
+              </el-input-number>
+            </el-form-item>
+          </el-col>
+        </el-row>
       </el-form>
     </div>
     <div class="right_container">
@@ -243,13 +313,18 @@ const downloadImages = () => {
 <style scoped>
 .operation_container {
   display: flex;
+  height: 200px;
 }
 .left_container {
-  width: 100%;
+  width: 200px;
+  background-color: #ccccccff;
+}
+.middle_container {
+  padding: 0 10px;
 }
 .right_container {
   /* width: 50%; */
-  padding: 0 20px;
+  padding: 0 10px;
   display: flex;
   flex-direction: column;
   /* align-items: center; */
@@ -264,19 +339,21 @@ const downloadImages = () => {
   background-color: #00a54aff;
 }
 .operation_btn {
-  width: 200px;
+  width: 180px;
   height: 50px;
   line-height: 50px;
   border-radius: 8px;
   cursor: pointer;
   user-select: none;
   color: #ffff;
+  text-align: center;
 }
 .uploadFilesBtn {
   border: 2px dashed #0077ff;
   height: 50px;
   line-height: 50px;
   cursor: pointer;
+  text-align: center;
 }
 .resetBtn {
   background-color: #a50000ff;
@@ -284,6 +361,7 @@ const downloadImages = () => {
 .canvas_container {
   /* width: 500px; */
   height: 500px;
+  margin-top: 10px;
   border: 1px solid #ccc;
 }
 #fileInput {
@@ -302,5 +380,12 @@ const downloadImages = () => {
 .imgItem img {
   /* width: 100px; */
   height: 100px;
+}
+.demo-form-inline .el-input {
+  --el-input-width: 150px;
+}
+
+.demo-form-inline .el-select {
+  --el-select-width: 150px;
 }
 </style>
